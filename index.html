@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF 텍스트 줄바꿈 해결기</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background-color: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge {
+      background-color: #2563eb;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Options Control Bar */
+    .toolbar-container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 16px auto 0 auto;
+      padding: 0 24px;
+    }
+
+    .toolbar {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 18px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .toolbar-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .option-group {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .toggle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #475569;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+
+    .toggle-label:hover {
+      color: #1e293b;
+    }
+
+    /* Main Container (2분할) */
+    main {
+      flex: 1;
+      padding: 16px 24px 24px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-header {
+      padding: 12px 18px;
+      background-color: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 52px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    /* 버튼 스타일 */
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+    }
+
+    .btn-secondary {
+      background-color: #ffffff;
+      border-color: #cbd5e1;
+      color: #475569;
+    }
+
+    .btn-secondary:hover {
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .btn-primary {
+      background-color: #2563eb;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background-color: #1d4ed8;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    textarea {
+      flex: 1;
+      width: 100%;
+      border: none;
+      resize: none;
+      padding: 18px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #334155;
+      outline: none;
+      font-family: inherit;
+      min-height: 480px;
+    }
+
+    textarea:focus {
+      background-color: #fafbfc;
+    }
+
+    textarea::placeholder {
+      color: #94a3b8;
+    }
+
+    #outputText {
+      background-color: #ffffff;
+    }
+
+    /* Card Footer */
+    .card-footer {
+      padding: 10px 18px;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      font-size: 12px;
+      color: #64748b;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .counter-item strong {
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background-color: #0f172a;
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="badge">교실 도구</span>
+    <h1>PDF 텍스트 줄바꿈 해결기</h1>
+  </header>
+
+  <!-- 교사용 맞춤 옵션 툴바 -->
+  <div class="toolbar-container">
+    <div class="toolbar">
+      <span class="toolbar-label">⚙️ 정제 옵션</span>
+      <div class="option-group">
+        <label class="toggle-label">
+          <input type="checkbox" id="optPreserveQuestion" checked>
+          문항/보기 기호 앞 줄바꿈 보존 (①~⑮, ㉠~㉭, 1), 2))
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="optMergeHangul" checked>
+          한글 단어 쪼개짐 자동 결합
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="optMergeHyphen" checked>
+          영단어 하이픈(-) 결합
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="optRemovePageNum" checked>
+          단독 쪽번호/머리말 제거
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="optSentenceBreak">
+          마침표 뒤 줄바꿈 분리
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- 입력 영역 -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">PDF 원본 붙여넣기</span>
+        <button id="clearBtn" class="btn-secondary" type="button">지우기</button>
+      </div>
+      <textarea id="inputText" placeholder="PDF에서 복사한 텍스트를 여기에 붙여넣으세요..."></textarea>
+      <div class="card-footer">
+        <span class="counter-item">공백 포함 <strong id="inWithSpaces">0</strong>자</span>
+        <span class="counter-item">공백 제외 <strong id="inWithoutSpaces">0</strong>자</span>
+      </div>
+    </section>
+
+    <!-- 결과 영역 -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">정제된 텍스트</span>
+        <div class="btn-group">
+          <button id="copyBtn" class="btn-primary" type="button">복사하기</button>
+        </div>
+      </div>
+      <textarea id="outputText" readonly placeholder="정제된 텍스트가 여기에 실시간으로 표시됩니다..."></textarea>
+      <div class="card-footer">
+        <span class="counter-item">공백 포함 <strong id="outWithSpaces">0</strong>자</span>
+        <span class="counter-item">공백 제외 <strong id="outWithoutSpaces">0</strong>자</span>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast">클립보드에 복사되었습니다!</div>
+
+  <script>
+    const inputText = document.getElementById('inputText');
+    const outputText = document.getElementById('outputText');
+    const clearBtn = document.getElementById('clearBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const toast = document.getElementById('toast');
+
+    // 옵션 체크박스
+    const optPreserveQuestion = document.getElementById('optPreserveQuestion');
+    const optMergeHangul = document.getElementById('optMergeHangul');
+    const optMergeHyphen = document.getElementById('optMergeHyphen');
+    const optRemovePageNum = document.getElementById('optRemovePageNum');
+    const optSentenceBreak = document.getElementById('optSentenceBreak');
+
+    // 카운터 엘리먼트
+    const inWithSpaces = document.getElementById('inWithSpaces');
+    const inWithoutSpaces = document.getElementById('inWithoutSpaces');
+    const outWithSpaces = document.getElementById('outWithSpaces');
+    const outWithoutSpaces = document.getElementById('outWithoutSpaces');
+
+    /**
+     * 통합 정제 파이프라인
+     */
+    function cleanText(rawText) {
+      if (!rawText) return '';
+
+      // 1. 줄바꿈 통일
+      let text = rawText.replace(/\r\n/g, '\n');
+
+      // 2. 단독 쪽번호 / 머리말 제거
+      if (optRemovePageNum.checked) {
+        text = text.split('\n').filter(line => {
+          const trimmed = line.trim();
+          if (/^\d{1,4}$/.test(trimmed)) return false;
+          if (/^\d{1,4}\s*\|\s*.+$/.test(trimmed)) return false;
+          return true;
+        }).join('\n');
+      }
+
+      // 3. 영단어 줄 끝 하이픈 결합
+      if (optMergeHyphen.checked) {
+        text = text.replace(/([a-zA-Z가-힣])-[\t ]*\n[\t ]*([a-zA-Z가-힣])/g, '$1$2');
+      }
+
+      // 4. 문단 구분(2개 이상의 연속 줄바꿈) 보호
+      const PARAGRAPH_TOKEN = '___PARAGRAPH_BREAK___';
+      text = text.replace(/\n\s*\n+/g, PARAGRAPH_TOKEN);
+
+      // 5. 문항/선지 기호 보호
+      const QUESTION_TOKEN = '___QUESTION_BREAK___';
+      if (optPreserveQuestion.checked) {
+        const questionPattern = /\n\s*([①-⑮❶-❿㉠-㉭]|\(\d+\)|\d+\)|\([가-힣]\)|[가-힣]\)|\d+\.)\s*/g;
+        text = text.replace(questionPattern, `${QUESTION_TOKEN}$1 `);
+      }
+
+      // 6. 마침표 뒤 줄바꿈 분리 보호
+      const SENTENCE_TOKEN = '___SENTENCE_BREAK___';
+      if (optSentenceBreak.checked) {
+        text = text.replace(/([.?!])\s*\n\s*/g, `$1${SENTENCE_TOKEN}`);
+      }
+
+      // 7. 한글과 한글 사이 줄바꿈 자동 결합 (신\n혼부부 -> 신혼부부, 있\n다 -> 있다)
+      if (optMergeHangul.checked) {
+        text = text.replace(/([가-힣])\s*\n\s*([가-힣])/g, '$1$2');
+      }
+
+      // 8. 일반 줄바꿈 -> 공백 1칸 변환
+      text = text.replace(/[ \t]*\n[ \t]*/g, ' ');
+
+      // 9. 연속 공백 단일화
+      text = text.replace(/[ \t]+/g, ' ');
+
+      // 10. 보호 토큰 복원
+      text = text.replace(new RegExp(QUESTION_TOKEN, 'g'), '\n');
+      text = text.replace(new RegExp(SENTENCE_TOKEN, 'g'), '\n');
+      text = text.replace(new RegExp(PARAGRAPH_TOKEN, 'g'), '\n\n');
+
+      // 11. 각 줄 앞뒤 공백 정리
+      return text.split('\n').map(line => line.trim()).join('\n').trim();
+    }
+
+    function process() {
+      outputText.value = cleanText(inputText.value);
+      updateCounters();
+    }
+
+    function updateCounters() {
+      const inVal = inputText.value;
+      const outVal = outputText.value;
+
+      inWithSpaces.textContent = inVal.length.toLocaleString();
+      inWithoutSpaces.textContent = inVal.replace(/\s/g, '').length.toLocaleString();
+
+      outWithSpaces.textContent = outVal.length.toLocaleString();
+      outWithoutSpaces.textContent = outVal.replace(/\s/g, '').length.toLocaleString();
+    }
+
+    // 이벤트 리스너
+    inputText.addEventListener('input', process);
+
+    [optPreserveQuestion, optMergeHangul, optMergeHyphen, optRemovePageNum, optSentenceBreak].forEach(checkbox => {
+      checkbox.addEventListener('change', process);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      inputText.value = '';
+      outputText.value = '';
+      updateCounters();
+      inputText.focus();
+    });
+
+    let toastTimeout;
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    copyBtn.addEventListener('click', async () => {
+      if (!outputText.value.trim()) {
+        showToast('복사할 텍스트가 없습니다.');
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(outputText.value);
+        showToast('클립보드에 복사되었습니다!');
+      } catch (err) {
+        outputText.select();
+        document.execCommand('copy');
+        showToast('클립보드에 복사되었습니다!');
+      }
+    });
+
+    updateCounters();
+  </script>
+</body>
+</html>
