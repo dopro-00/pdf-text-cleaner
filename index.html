@@ -364,40 +364,46 @@
         text = text.replace(/([a-zA-Z가-힣])-[\t ]*\n[\t ]*([a-zA-Z가-힣])/g, '$1$2');
       }
 
-      // 4. 문단 구분(2개 이상의 연속 줄바꿈) 보호
+      // 4. ■로 시작하는 제목 줄의 '끝'에서 줄바꿈 보존
+      //    예: ■ 지리 정보 체계(GIS)\n공간 정보... 형태 유지
+      const SQUARE_HEADING_TOKEN = '___SQUARE_HEADING_BREAK___';
+      text = text.replace(/(^|\n)([ \t]*■[^\n]*)\n[ \t]*/g, `$1$2${SQUARE_HEADING_TOKEN}`);
+
+      // 5. 문단 구분(2개 이상의 연속 줄바꿈) 보호
       const PARAGRAPH_TOKEN = '___PARAGRAPH_BREAK___';
       text = text.replace(/\n\s*\n+/g, PARAGRAPH_TOKEN);
 
-      // 5. 문항/선지 기호 보호
+      // 6. 문항/선지 기호 보호
       const QUESTION_TOKEN = '___QUESTION_BREAK___';
       if (optPreserveQuestion.checked) {
         const questionPattern = /\n\s*([①-⑮❶-❿㉠-㉭]|\(\d+\)|\d+\)|\([가-힣]\)|[가-힣]\)|\d+\.)\s*/g;
         text = text.replace(questionPattern, `${QUESTION_TOKEN}$1 `);
       }
 
-      // 6. 마침표 뒤 줄바꿈 분리 보호
+      // 7. 마침표 뒤 줄바꿈 분리 보호
       const SENTENCE_TOKEN = '___SENTENCE_BREAK___';
       if (optSentenceBreak.checked) {
         text = text.replace(/([.?!])\s*\n\s*/g, `$1${SENTENCE_TOKEN}`);
       }
 
-      // 7. 한글과 한글 사이 줄바꿈 자동 결합 (신\n혼부부 -> 신혼부부, 있\n다 -> 있다)
+      // 8. 한글과 한글 사이 줄바꿈 자동 결합 (신\n혼부부 -> 신혼부부, 있\n다 -> 있다)
       if (optMergeHangul.checked) {
         text = text.replace(/([가-힣])\s*\n\s*([가-힣])/g, '$1$2');
       }
 
-      // 8. 일반 줄바꿈 -> 공백 1칸 변환
+      // 9. 일반 줄바꿈 -> 공백 1칸 변환
       text = text.replace(/[ \t]*\n[ \t]*/g, ' ');
 
-      // 9. 연속 공백 단일화
+      // 10. 연속 공백 단일화
       text = text.replace(/[ \t]+/g, ' ');
 
-      // 10. 보호 토큰 복원
+      // 11. 보호 토큰 복원
       text = text.replace(new RegExp(QUESTION_TOKEN, 'g'), '\n');
       text = text.replace(new RegExp(SENTENCE_TOKEN, 'g'), '\n');
+      text = text.replace(new RegExp(SQUARE_HEADING_TOKEN, 'g'), '\n');
       text = text.replace(new RegExp(PARAGRAPH_TOKEN, 'g'), '\n\n');
 
-      // 11. 각 줄 앞뒤 공백 정리
+      // 12. 각 줄 앞뒤 공백 정리
       return text.split('\n').map(line => line.trim()).join('\n').trim();
     }
 
